@@ -18,35 +18,35 @@ class Combo:
     @property
     def character(self) -> str:
         return str(self._character)
-    
+
     @property
     def notation(self) -> str:
         return str(self._notation)
-    
+
     @property
     def startup(self) -> int:
         return int(self._startup)
-    
+
     @property
     def drive(self) -> float:
         return float(self._drive)
-    
+
     @property
     def super(self) -> float:
         return float(self._super)
-    
+
     @property
     def carry(self) -> float:
         return float(self._carry)
-    
+
     @property
     def damage(self) -> int:
         return int(self._damage)
-    
+
     @property
     def advantage(self) -> int:
         return int(self._advantage)
-    
+
     def get(self, prop: str) -> str:
         return getattr(self, prop)
 
@@ -59,7 +59,7 @@ SUP: {"+" if self.super >= 0.0 else ""}{self.super} bars\n\
 CAR: {self.carry:.0%}\n\
 DMG: {self.damage}\n\
 ADV: {"+" if int(self.advantage) >= 0 else ""}{self.advantage}\n'
-    
+
 def get_truth(inp, relate, cut):
     ops = {'gt': operator.gt,
            'lt': operator.lt,
@@ -85,7 +85,7 @@ def main() -> None:
         combos_list = list(csv.reader(combos_file, skipinitialspace=True))[1:]
 
     combos = set([Combo(*combo) for combo in combos_list])
-    
+
     filters = {}
     if args.chr:
         filters['character'] = ('eq', args.chr)
@@ -105,14 +105,11 @@ def main() -> None:
         filters['advantage'] = (args.adv[0], int(args.adv[1]))
 
     if filters:
-        filtered_combos = [combo for combo in combos if all(get_truth(combo.get(prop), filters.get(prop)[0], filters.get(prop)[1]) for prop in filters)]
-        combo_count = len(filtered_combos)
-        print(f'{combo_count} combo{"s" if combo_count > 1 else ""} found', end='\n\n')
-        [print(combo) for combo in filtered_combos]
-    else:
-        print(f'{len(combos)} combos found', end='\n\n')
-        [print(combo) for combo in combos]
-        
+        combos = [combo for combo in combos if all(get_truth(combo.get(prop), filters.get(prop)[0], filters.get(prop)[1]) for prop in filters)]
+
+    combo_count = len(combos)
+    print(f'{combo_count} combo{"" if combo_count == 1 else "s"} found', end='\n\n')
+    [print(combo) for combo in combos]
 
 if __name__ == "__main__":
     main()
