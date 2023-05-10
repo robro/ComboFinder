@@ -55,54 +55,75 @@ class Combo:
     def get(self, prop: str) -> str:
         return getattr(self, prop)
 
-    def __str__(self) -> str:
-        return f'CHR: {self.character}\n\
-NTA: {self.notation}\n\
-STP: {self.startup} frames\n\
-DRV: {self.drive} bars\n\
-SUP: {self.super} bars\n\
-CAR: {self.carry:.0%}\n\
-DMG: {self.damage}\n\
-ADV: {"+" if int(self.advantage) >= 0 else ""}{self.advantage}\n'
-
 
 class ComboFinder(tk.Tk):
-    combos: set = None
+    combos: list[Combo] = []
+    combo_props = ('Character', 'Notation', 'Startup', 'Drive', 'Super', 'Carry', 'Damage', 'Advantage')
 
     def __init__(self, *args, **kwargs):
         tk.Tk.__init__(self, *args, **kwargs)
 
+        padx = 5
+        pady = 5
+        button_width = 20
+        title_font = ('Calibri', 12)
+        row_count = 10
+
         self.title('Combo Finder')
         self.resizable(False, False)
 
-        self.frame = tk.Frame(self, padx=10, pady=10)
-        self.frame.pack()
+        self.btns = tk.Frame(self, padx=padx, pady=pady)
+        self.btns.grid(row=0, sticky='nesw')
 
-        self.combo_import_btn = ttk.Button(self.frame, text='Import combos', width=40, command=self.import_combos)
-        self.combo_import_btn.grid(row=0, column=0, padx=5, pady=5)
+        self.import_btn = ttk.Button(self.btns, text='Import combos', width=button_width, command=self.import_combos)
+        self.import_btn.grid(row=0, column=0, padx=padx, pady=pady, sticky='w')
+        self.filter_btn = ttk.Button(self.btns, text='Filter', width=button_width)
+        self.filter_btn.grid(row=0, column=1, padx=15, pady=pady, sticky='w')
 
-        self.text = tk.Text(self.frame, relief='flat', cursor='arrow', width=40, state='disabled')
-        self.text.grid(row=1, column=0, padx=5, pady=5)
+        self.main = tk.Frame(self, padx=10, pady=10)
+        column_sizes = (100, 200, 100, 100, 100, 100, 100, 100)
+        for i, size in enumerate(column_sizes):
+            self.main.grid_columnconfigure(i, minsize=size)
+        self.main.grid(row=1)
+        self.labels = [ttk.Label(self.main, text=column_title, background='gray', anchor='center', padding=padx, font=title_font) for column_title in self.combo_props]
+        for i, label in enumerate(self.labels):
+            label.grid(row=0, column=i, sticky='nsew')
 
-        self.msg_var = tk.StringVar()
-        self.message = tk.Message(self.frame, textvariable=self.msg_var, width='300p')
-        self.message.grid(row=2, column=0, padx=5, pady=5, sticky='w')
+        self.text_rows = [[tk.Text(self.main, width=1, height=1, border=0, cursor='arrow', padx=padx, pady=pady) for _ in range(len(self.combo_props))] for _ in range(row_count)]
+        for i, text_row in enumerate(self.text_rows, 1):
+            bg_color = 'white' if i % 2 else 'lightgray'
+            for j, text_box in enumerate(text_row):
+                # text_box.insert('end', f'{i}{j}')
+                text_box.config(bg=bg_color)
+                text_box.grid(row=i, column=j, sticky='nsew')
+                text_box.config(state='disabled')
+
+        self.message_frame = tk.Frame(self)
+        self.message_frame.grid(row=2, sticky='nsew')
+        self.message_var = tk.StringVar()
+        self.message = tk.Message(self.message_frame, textvariable=self.message_var, width=300)
+        self.message.grid()
 
     def import_combos(self):
-        filename = filedialog.askopenfilename(initialdir=os.path.abspath('.'), filetypes=[('CSV', '.csv')])
-
+        filename = filedialog.askopenfilename(initialdir=os.path.abspath('.'), filetypes=[('Comma separated', '.csv')])
+        if not filename:
+            return
+        
         with open(filename, 'r') as combos_file:
             combos_list = list(csv.reader(combos_file, skipinitialspace=True))[1:]
 
-        self.combos = set(Combo(*combo) for combo in combos_list)
-        self.update_combos()
-        self.msg_var.set('Combos successfully imported')
+        self.combos = list(set(Combo(*combo) for combo in combos_list))
+        self.update_display()
+        self.message_var.set('Combos successfully imported')
 
-    def update_combos(self):
-        self.text['state'] = 'normal'
-        self.text.delete(1.0, 'end')
-        self.text.insert('end', '\n'.join(combo.__str__() for combo in self.combos))
-        self.text['state'] = 'disabled'
+    def update_display(self):
+        for i, row in enumerate(self.text_rows):
+            for j, text in enumerate(row):
+                text.config(state='normal')
+                text.delete(1.0, 'end')
+                if i < len(self.combos):
+                    text.insert('end', self.combos[i].get(self.combo_props[j].lower()))
+                text.config(state='disabled')
 
 
 def get_truth(inp, relate, cut):
