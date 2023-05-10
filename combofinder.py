@@ -61,11 +61,12 @@ DMG: {self.damage}\n\
 ADV: {"+" if int(self.advantage) >= 0 else ""}{self.advantage}\n'
     
 def get_truth(inp, relate, cut):
-    ops = {'>': operator.gt,
-           '<': operator.lt,
-           '>=': operator.ge,
-           '<=': operator.le,
-           '==': operator.eq}
+    ops = {'gt': operator.gt,
+           'lt': operator.lt,
+           'ge': operator.ge,
+           'le': operator.le,
+           'eq': operator.eq,
+           'ne': operator.ne}
     return ops[relate](inp, cut)
 
 def main() -> None:
@@ -87,9 +88,9 @@ def main() -> None:
     
     filters = {}
     if args.chr:
-        filters['character'] = ('==', args.chr)
+        filters['character'] = ('eq', args.chr)
     if args.nta:
-        filters['notation'] = ('==', args.nta)
+        filters['notation'] = ('eq', args.nta)
     if args.stp:
         filters['startup'] = (args.stp[0], int(args.stp[1]))
     if args.drv:
@@ -104,8 +105,12 @@ def main() -> None:
         filters['advantage'] = (args.adv[0], int(args.adv[1]))
 
     if filters:
-        [print(combo) for combo in combos if all(get_truth(combo.get(prop), filters[prop][0], filters[prop][1]) for prop in filters)]
+        filtered_combos = [combo for combo in combos if all(get_truth(combo.get(prop), filters.get(prop)[0], filters.get(prop)[1]) for prop in filters)]
+        combo_count = len(filtered_combos)
+        print(f'{combo_count} combo{"s" if combo_count > 1 else ""} found', end='\n\n')
+        [print(combo) for combo in filtered_combos]
     else:
+        print(f'{len(combos)} combos found', end='\n\n')
         [print(combo) for combo in combos]
         
 
