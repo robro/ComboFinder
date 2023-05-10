@@ -32,8 +32,8 @@ class Combo:
         return float(self._drive)
 
     @property
-    def super(self) -> float:
-        return float(self._super)
+    def super(self) -> int:
+        return int(self._super)
 
     @property
     def carry(self) -> float:
@@ -54,8 +54,8 @@ class Combo:
         return f'CHR: {self.character}\n\
 NTA: {self.notation}\n\
 STP: {self.startup} frames\n\
-DRV: {"+" if self.drive >= 0.0 else ""}{self.drive} bars\n\
-SUP: {"+" if self.super >= 0.0 else ""}{self.super} bars\n\
+DRV: {self.drive} bars\n\
+SUP: {self.super} bars\n\
 CAR: {self.carry:.0%}\n\
 DMG: {self.damage}\n\
 ADV: {"+" if int(self.advantage) >= 0 else ""}{self.advantage}\n'
@@ -84,7 +84,7 @@ def main() -> None:
     with open('combos.csv', 'r') as combos_file:
         combos_list = list(csv.reader(combos_file, skipinitialspace=True))[1:]
 
-    combos = set([Combo(*combo) for combo in combos_list])
+    combos = set(Combo(*combo) for combo in combos_list)
 
     filters = {}
     if args.chr:
@@ -96,7 +96,7 @@ def main() -> None:
     if args.drv:
         filters['drive'] = (args.drv[0], float(args.drv[1]))
     if args.sup:
-        filters['super'] = (args.sup[0], float(args.sup[1]))
+        filters['super'] = (args.sup[0], int(args.sup[1]))
     if args.car:
         filters['carry'] = (args.car[0], float(args.car[1]))
     if args.dmg:
@@ -105,7 +105,7 @@ def main() -> None:
         filters['advantage'] = (args.adv[0], int(args.adv[1]))
 
     if filters:
-        combos = [combo for combo in combos if all(get_truth(combo.get(prop), filters.get(prop)[0], filters.get(prop)[1]) for prop in filters)]
+        combos = set(combo for combo in combos if all(get_truth(combo.get(prop), filters.get(prop)[0], filters.get(prop)[1]) for prop in filters))
 
     combo_count = len(combos)
     print(f'{combo_count} combo{"" if combo_count == 1 else "s"} found', end='\n\n')
