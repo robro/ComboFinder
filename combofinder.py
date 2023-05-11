@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 import csv
 import operator
-import argparse
 import os
 import tkinter as tk
 from tkinter import ttk
@@ -87,20 +86,20 @@ class ComboFinder(tk.Tk):
         padx = 5
         pady = 5
         button_width = 20
-        title_font = ('Calibri', 12)
         row_count = 10
         header_bg = 'gray'
         text_bgs = ('white', 'lightgray')
+        header_font = ('Calibri', 12)
 
         self.filters = {
             'Character': [tk.StringVar(value='Contains'), tk.StringVar(), 'str'],
             'Notation': [tk.StringVar(value='Contains'), tk.StringVar(), 'str'],
-            'Startup': [tk.StringVar(value=self.compares[0]), tk.StringVar(), 'int'],
-            'Drive': [tk.StringVar(value=self.compares[0]), tk.StringVar(), 'float'],
-            'Super': [tk.StringVar(value=self.compares[0]), tk.StringVar(), 'int'],
-            'Carry': [tk.StringVar(value=self.compares[0]), tk.StringVar(), 'float'],
-            'Damage': [tk.StringVar(value=self.compares[0]), tk.StringVar(), 'int'],
-            'Advantage': [tk.StringVar(value=self.compares[0]), tk.StringVar(), 'int'],
+            'Startup': [tk.StringVar(value='Equals'), tk.StringVar(), 'int'],
+            'Drive': [tk.StringVar(value='Equals'), tk.StringVar(), 'float'],
+            'Super': [tk.StringVar(value='Equals'), tk.StringVar(), 'int'],
+            'Carry': [tk.StringVar(value='Equals'), tk.StringVar(), 'float'],
+            'Damage': [tk.StringVar(value='Equals'), tk.StringVar(), 'int'],
+            'Advantage': [tk.StringVar(value='Equals'), tk.StringVar(), 'int']
         }
 
         self.title('SF6 Combo Finder')
@@ -123,7 +122,7 @@ class ComboFinder(tk.Tk):
         for i, size in enumerate(column_sizes):
             self.info_frame.grid_columnconfigure(i, minsize=size)
         self.info_frame.grid(row=1)
-        headers = [ttk.Label(self.info_frame, text=header_str, background=header_bg, anchor='center', padding=padx, font=title_font)
+        headers = [ttk.Label(self.info_frame, text=header_str, background=header_bg, anchor='center', padding=padx, font=header_font)
                    for header_str in self.combo_props]
         for i, label in enumerate(headers):
             label.grid(row=0, column=i, sticky='nsew')
@@ -203,13 +202,13 @@ class ComboFinder(tk.Tk):
         self.message_var.set('Combos successfully imported')
 
     def update_combos(self):
-        # [print(name, text[0].get(), text[1].get()) for name, text in self.filters.items()]
         matches = []
         for combo in self.combos:
             for prop in self.filters:
                 if not self.filters[prop][1].get():
                     continue
-                if not get_truth(combo.get(prop.lower()), self.filters[prop][0].get(), self.types[self.filters[prop][2]](self.filters[prop][1].get())):
+                if not get_truth(combo.get(prop.lower()), self.filters[prop][0].get(),
+                        self.types[self.filters[prop][2]](self.filters[prop][1].get())):
                     break
             else:
                 matches.append(combo)
@@ -243,48 +242,6 @@ def get_truth(inp, relate, cut):
            'Less Than': operator.lt,
            'Contains': operator.contains}
     return ops[relate](inp, cut)
-
-def main() -> None:
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--chr', metavar='CHARACTER')
-    parser.add_argument('--nta', metavar='NOTATION')
-    parser.add_argument('--stp', nargs=2, metavar=('OP', 'STARTUP'))
-    parser.add_argument('--drv', nargs=2, metavar=('OP', 'DRIVE'))
-    parser.add_argument('--sup', nargs=2, metavar=('OP', 'SUPER'))
-    parser.add_argument('--car', nargs=2, metavar=('OP', 'CARRY'))
-    parser.add_argument('--dmg', nargs=2, metavar=('OP', 'DAMAGE'))
-    parser.add_argument('--adv', nargs=2, metavar=('OP', 'ADVANTAGE'))
-    args = parser.parse_args()
-
-    with open('combos.csv', 'r') as combos_file:
-        combos_list = list(csv.reader(combos_file, skipinitialspace=True))[1:]
-
-    combos = set(Combo(*combo) for combo in combos_list)
-
-    filters = {}
-    if args.chr:
-        filters['character'] = ('eq', args.chr)
-    if args.nta:
-        filters['notation'] = ('eq', args.nta)
-    if args.stp:
-        filters['startup'] = (args.stp[0], int(args.stp[1]))
-    if args.drv:
-        filters['drive'] = (args.drv[0], float(args.drv[1]))
-    if args.sup:
-        filters['super'] = (args.sup[0], int(args.sup[1]))
-    if args.car:
-        filters['carry'] = (args.car[0], float(args.car[1]))
-    if args.dmg:
-        filters['damage'] = (args.dmg[0], int(args.dmg[1]))
-    if args.adv:
-        filters['advantage'] = (args.adv[0], int(args.adv[1]))
-
-    if filters:
-        combos = set(combo for combo in combos if all(get_truth(combo.get(prop), filters.get(prop)[0], filters.get(prop)[1]) for prop in filters))
-
-    combo_count = len(combos)
-    print(f'{combo_count} combo{"" if combo_count == 1 else "s"} found', end='\n\n')
-    [print(combo) for combo in combos]
 
 if __name__ == "__main__":
     combo_finder = ComboFinder()
