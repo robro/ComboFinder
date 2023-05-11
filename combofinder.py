@@ -58,6 +58,7 @@ class Combo:
 
 class ComboFinder(tk.Tk):
     combos: list[Combo] = []
+    display_combos: list[Combo] = []
     combo_props = (
         'Character',
         'Notation',
@@ -70,9 +71,15 @@ class ComboFinder(tk.Tk):
     )
     compares = (
         'Equals',
+        'Not Equals',
         'Greater Than',
         'Less Than'
     )
+    types = {
+        'str': str,
+        'int': int,
+        'float': float
+    }
 
     def __init__(self, *args, **kwargs):
         tk.Tk.__init__(self, *args, **kwargs)
@@ -84,13 +91,22 @@ class ComboFinder(tk.Tk):
         row_count = 10
         header_bg = 'gray'
         text_bgs = ('white', 'lightgray')
-        
-        self.filters = {prop: [tk.StringVar(value=self.compares[0]), tk.StringVar()] for prop in self.combo_props}
+
+        self.filters = {
+            'Character': [tk.StringVar(value=self.compares[0]), tk.StringVar(), 'str'],
+            'Notation': [tk.StringVar(value='Contains'), tk.StringVar(), 'str'],
+            'Startup': [tk.StringVar(value=self.compares[0]), tk.StringVar(), 'int'],
+            'Drive': [tk.StringVar(value=self.compares[0]), tk.StringVar(), 'float'],
+            'Super': [tk.StringVar(value=self.compares[0]), tk.StringVar(), 'int'],
+            'Carry': [tk.StringVar(value=self.compares[0]), tk.StringVar(), 'float'],
+            'Damage': [tk.StringVar(value=self.compares[0]), tk.StringVar(), 'int'],
+            'Advantage': [tk.StringVar(value=self.compares[0]), tk.StringVar(), 'int'],
+        }
 
         self.title('SF6 Combo Finder')
         self.resizable(False, False)
 
-        # Button Frame
+        # Button frame
 
         self.button_frame = tk.Frame(self, padx=padx, pady=pady)
         self.button_frame.grid(row=0, sticky='nesw')
@@ -100,7 +116,7 @@ class ComboFinder(tk.Tk):
         ttk.Button(self.button_frame, text='Filters', width=button_width, command=self.open_filters)\
             .grid(row=0, column=1, padx=15, pady=pady, sticky='w')
 
-        # Info Frame
+        # Info frame
 
         self.info_frame = tk.Frame(self, padx=10, pady=10)
         column_sizes = (100, 200, 100, 100, 100, 100, 100, 100)
@@ -119,12 +135,11 @@ class ComboFinder(tk.Tk):
         for i, text_row in enumerate(self.text_rows, 1):
             bg_color = text_bgs[0] if i % 2 else text_bgs[1]
             for j, text_box in enumerate(text_row):
-                # text_box.insert('end', f'{i}{j}')
                 text_box.config(bg=bg_color)
                 text_box.grid(row=i, column=j, sticky='nsew')
                 text_box.config(state='disabled')
 
-        # Message Frame
+        # Message frame
 
         self.message_frame = tk.Frame(self)
         self.message_frame.grid(row=2, sticky='nsew')
@@ -133,7 +148,7 @@ class ComboFinder(tk.Tk):
 
     def open_filters(self):
         try:
-            self.filter_window.deiconify()
+            self.filter_window.focus()
             return
         except:
             pass
@@ -146,7 +161,7 @@ class ComboFinder(tk.Tk):
 
         self.filters_frame = tk.Frame(self.filter_window, padx=5, pady=5)
         self.filters_frame.grid(row=0)
-        
+
         for i, prop in enumerate(self.combo_props):
             entry_width = 30
             columnspan = 2
@@ -163,14 +178,16 @@ class ComboFinder(tk.Tk):
                     .grid(row=i, column=1, sticky='w', padx=5, pady=5)
             ttk.Entry(self.filters_frame, width=entry_width, textvariable=self.filters[prop][1])\
                 .grid(row=i, column=column, sticky='w', padx=padx, pady=5, columnspan=columnspan)
-        
+
         # Buttons frame
 
         self.submit_frame = tk.Frame(self.filter_window, padx=5, pady=5)
         self.submit_frame.grid(row=1)
 
-        ttk.Button(self.submit_frame, text='Submit', command=self.update_filters)\
-            .grid(row=0, column=0, sticky='w')
+        ttk.Button(self.submit_frame, text='Submit', command=self.update_combos)\
+            .grid(row=0, column=0, padx=5, pady=5, sticky='w')
+        ttk.Button(self.submit_frame, text='Clear', command=self.clear_filters)\
+            .grid(row=0, column=1, padx=5, pady=5, sticky='w')
 
     def import_combos(self):
         filename = filedialog.askopenfilename(initialdir=os.path.abspath('.'), filetypes=[('Comma separated', '.csv')])
@@ -181,29 +198,50 @@ class ComboFinder(tk.Tk):
             combos_list = list(csv.reader(combos_file, skipinitialspace=True))[1:]
 
         self.combos = list(set(Combo(*combo) for combo in combos_list))
+        self.display_combos = self.combos
         self.update_display()
         self.message_var.set('Combos successfully imported')
 
-    def update_filters(self):
-        [print(name, text[0].get(), text[1].get()) for name, text in self.filters.items()]
+    def update_combos(self):
+        # [print(name, text[0].get(), text[1].get()) for name, text in self.filters.items()]
+        matches = []
+        for combo in self.combos:
+            for prop in self.filters:
+                if not self.filters[prop][1].get():
+                    continue
+                if not get_truth(combo.get(prop.lower()), self.filters[prop][0].get(), self.types[self.filters[prop][2]](self.filters[prop][1].get())):
+                    break
+            else:
+                matches.append(combo)
+
+        self.display_combos = matches
+        self.update_display()
+        self.message_var.set('Combos updated')
 
     def update_display(self):
         for i, row in enumerate(self.text_rows):
             for j, text in enumerate(row):
                 text.config(state='normal')
                 text.delete(1.0, 'end')
-                if i < len(self.combos):
-                    text.insert('end', self.combos[i].get(self.combo_props[j].lower()))
+                if i < len(self.display_combos):
+                    text.insert('end', self.display_combos[i].get(self.combo_props[j].lower()))
                 text.config(state='disabled')
+
+    def clear_filters(self):
+        for filter in self.filters.values():
+            filter[1].set('')
+        
+        self.display_combos = self.combos
+        self.update_display()
+        self.message_var.set('Filters cleared')
 
 
 def get_truth(inp, relate, cut):
-    ops = {'gt': operator.gt,
-           'lt': operator.lt,
-           'ge': operator.ge,
-           'le': operator.le,
-           'eq': operator.eq,
-           'ne': operator.ne}
+    ops = {'Equals': operator.eq,
+           'Not Equals': operator.ne,
+           'Greater Than': operator.gt,
+           'Less Than': operator.lt,
+           'Contains': operator.contains}
     return ops[relate](inp, cut)
 
 def main() -> None:
