@@ -5,6 +5,7 @@ import os
 import tkinter as tk
 from tkinter import ttk
 from tkinter import filedialog
+from functools import partial
 from dataclasses import dataclass
 
 
@@ -56,6 +57,9 @@ class Combo:
 
 
 class ComboFinder(tk.Tk):
+    pad = 5
+    current_sort = 'character'
+    is_reversed = False
     combos: list[Combo] = []
     display_combos: list[Combo] = []
     combo_props = (
@@ -83,13 +87,9 @@ class ComboFinder(tk.Tk):
     def __init__(self, *args, **kwargs):
         tk.Tk.__init__(self, *args, **kwargs)
 
-        padx = 5
-        pady = 5
         button_width = 20
         row_count = 10
-        header_bg = 'gray'
         text_bgs = ('white', 'lightgray')
-        header_font = ('Calibri', 12)
 
         self.filters = {
             'Character': [tk.StringVar(value='Contains'), tk.StringVar(), 'str'],
@@ -107,28 +107,30 @@ class ComboFinder(tk.Tk):
 
         # Button frame
 
-        self.button_frame = tk.Frame(self, padx=padx, pady=pady)
+        self.button_frame = tk.Frame(self, padx=self.pad, pady=self.pad)
         self.button_frame.grid(row=0, sticky='nesw')
 
         ttk.Button(self.button_frame, text='Import combos', width=button_width, command=self.import_combos)\
-            .grid(row=0, column=0, padx=padx, pady=pady, sticky='w')
+            .grid(row=0, column=0, padx=self.pad, pady=self.pad, sticky='w')
         ttk.Button(self.button_frame, text='Filters', width=button_width, command=self.open_filters)\
-            .grid(row=0, column=1, padx=15, pady=pady, sticky='w')
+            .grid(row=0, column=1, padx=self.pad, pady=self.pad, sticky='w')
 
         # Info frame
 
-        self.info_frame = tk.Frame(self, padx=10, pady=10)
+        self.info_frame = tk.Frame(self, padx=10, pady=self.pad)
         column_sizes = (100, 200, 100, 100, 100, 100, 100, 100)
         for i, size in enumerate(column_sizes):
             self.info_frame.grid_columnconfigure(i, minsize=size)
         self.info_frame.grid(row=1)
-        headers = [ttk.Label(self.info_frame, text=header_str, background=header_bg, anchor='center', padding=padx, font=header_font)
-                   for header_str in self.combo_props]
-        for i, label in enumerate(headers):
-            label.grid(row=0, column=i, sticky='nsew')
+        self.headers = [ttk.Button(self.info_frame, text=header_str, name=header_str.lower(),
+                        command=partial(self.sort_by, header_str))
+                        for header_str in self.combo_props]
+        for i, header in enumerate(self.headers):
+            header.grid(row=0, column=i, sticky='nsew')
+            header.config(state='disabled')
 
         self.text_rows = [[
-            tk.Text(self.info_frame, width=1, height=1, border=0, cursor='arrow', padx=padx, pady=pady)
+            tk.Text(self.info_frame, width=1, height=1, border=0, cursor='arrow', padx=self.pad, pady=self.pad)
             for _ in range(len(self.combo_props))]
             for _ in range(row_count)]
         for i, text_row in enumerate(self.text_rows, 1):
@@ -144,6 +146,7 @@ class ComboFinder(tk.Tk):
         self.message_frame.grid(row=2, sticky='nsew')
         self.message_var = tk.StringVar()
         tk.Message(self.message_frame, textvariable=self.message_var, width=300).grid(sticky='w')
+        self.sort_by(self.current_sort)
 
     def open_filters(self):
         try:
@@ -158,14 +161,14 @@ class ComboFinder(tk.Tk):
 
         # Filters frame
 
-        self.filters_frame = tk.Frame(self.filter_window, padx=5, pady=5)
+        self.filters_frame = tk.Frame(self.filter_window, padx=self.pad, pady=self.pad)
         self.filters_frame.grid(row=0)
 
         for i, prop in enumerate(self.combo_props):
             entry_width = 30
             columnspan = 2
             column = 1
-            padx = 5
+            padx = self.pad
             ttk.Label(self.filters_frame, text=prop, anchor='center', padding=5)\
                 .grid(row=i, column=0, sticky='w')
             if i > 1:
@@ -174,19 +177,19 @@ class ComboFinder(tk.Tk):
                 column = 2
                 padx = 0
                 ttk.Combobox(self.filters_frame, width=11, textvariable=self.filters[prop][0], values=self.compares)\
-                    .grid(row=i, column=1, sticky='w', padx=5, pady=5)
+                    .grid(row=i, column=1, sticky='w', padx=self.pad, pady=self.pad)
             ttk.Entry(self.filters_frame, width=entry_width, textvariable=self.filters[prop][1])\
-                .grid(row=i, column=column, sticky='w', padx=padx, pady=5, columnspan=columnspan)
+                .grid(row=i, column=column, sticky='w', padx=padx, pady=self.pad, columnspan=columnspan)
 
         # Buttons frame
 
-        self.submit_frame = tk.Frame(self.filter_window, padx=5, pady=5)
+        self.submit_frame = tk.Frame(self.filter_window, padx=self.pad, pady=self.pad)
         self.submit_frame.grid(row=1)
 
         ttk.Button(self.submit_frame, text='Submit', command=self.update_combos)\
-            .grid(row=0, column=0, padx=5, pady=5, sticky='w')
-        ttk.Button(self.submit_frame, text='Clear', command=self.clear_filters)\
-            .grid(row=0, column=1, padx=5, pady=5, sticky='w')
+            .grid(row=0, column=0, padx=self.pad, pady=self.pad, sticky='w')
+        ttk.Button(self.submit_frame, text='Reset', command=self.reset_filters)\
+            .grid(row=0, column=1, padx=self.pad, pady=self.pad, sticky='w')
 
     def import_combos(self):
         filename = filedialog.askopenfilename(initialdir=os.path.abspath('.'), filetypes=[('Comma separated', '.csv')])
@@ -199,7 +202,7 @@ class ComboFinder(tk.Tk):
         self.combos = list(set(Combo(*combo) for combo in combos_list))
         self.display_combos = self.combos
         self.update_display()
-        self.message_var.set('Combos successfully imported')
+        self.message_var.set(f'Imported {len(self.combos)} total combos')
 
     def update_combos(self):
         matches = []
@@ -215,9 +218,14 @@ class ComboFinder(tk.Tk):
 
         self.display_combos = matches
         self.update_display()
-        self.message_var.set('Combos updated')
+        self.message_var.set(f'Found {len(self.display_combos)} out of {len(self.combos)} total combos')
 
     def update_display(self):
+        self.display_combos.sort(key=lambda x: x.get(self.current_sort), reverse=self.is_reversed)
+        state = 'normal' if self.display_combos else 'disabled'
+        for header in self.headers:
+            header.config(state=state)
+
         for i, row in enumerate(self.text_rows):
             for j, text in enumerate(row):
                 text.config(state='normal')
@@ -226,13 +234,25 @@ class ComboFinder(tk.Tk):
                     text.insert('end', self.display_combos[i].get(self.combo_props[j].lower()))
                 text.config(state='disabled')
 
-    def clear_filters(self):
-        for filter in self.filters.values():
-            filter[1].set('')
+    def sort_by(self, prop: str):
+        prop = prop.lower()
+        for header in self.headers:
+            default = 'active' if header.winfo_name() == prop else 'normal'
+            header.config(default=default)
+
+        self.is_reversed = not self.is_reversed if prop == self.current_sort else False
+        self.current_sort = prop
+        self.update_display()
+
+    def reset_filters(self):
+        for filter in self.filters:
+            if filter not in ('Character', 'Notation'):
+                self.filters[filter][0].set('Equals')
+            self.filters[filter][1].set('')
         
         self.display_combos = self.combos
         self.update_display()
-        self.message_var.set('Filters cleared')
+        self.message_var.set('Filters reset')
 
 
 def get_truth(inp, relate, cut):
