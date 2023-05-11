@@ -42,8 +42,8 @@ class Combo:
         return int(self._super)
 
     @property
-    def carry(self) -> float:
-        return float(self._carry)
+    def carry(self) -> int:
+        return int(self._carry)
 
     @property
     def damage(self) -> int:
@@ -53,7 +53,11 @@ class Combo:
     def advantage(self) -> int:
         return int(self._advantage)
 
-    def get(self, prop: str) -> str:
+    def get(self, prop: str, display=False):
+        if prop == 'carry' and display:
+            return f'{self.carry}%'
+        if prop == 'advantage' and display:
+            return f'{"+" if self.advantage >= 0 else ""}{self.advantage}'
         return getattr(self, prop)
 
 
@@ -99,7 +103,7 @@ class ComboFinder(tk.Tk):
             'Startup': [tk.StringVar(value='Equals'), tk.StringVar(), 'int'],
             'Drive': [tk.StringVar(value='Equals'), tk.StringVar(), 'float'],
             'Super': [tk.StringVar(value='Equals'), tk.StringVar(), 'int'],
-            'Carry': [tk.StringVar(value='Equals'), tk.StringVar(), 'float'],
+            'Carry': [tk.StringVar(value='Equals'), tk.StringVar(), 'int'],
             'Damage': [tk.StringVar(value='Equals'), tk.StringVar(), 'int'],
             'Advantage': [tk.StringVar(value='Equals'), tk.StringVar(), 'int']
         }
@@ -264,7 +268,7 @@ class ComboFinder(tk.Tk):
         start_index = (self.row_count*self.current_page.get())-self.row_count
         for i, row in enumerate(self.text_rows, start_index):
             for j, label in enumerate(row):
-                text = self.display_combos[i].get(self.props[j].lower())\
+                text = self.display_combos[i].get(self.props[j].lower(), display=True)\
                        if i < len(self.display_combos) else ''
                 label.config(text=text)
                 
