@@ -7,6 +7,7 @@ from tkinter import ttk
 from tkinter import filedialog
 from functools import partial
 from dataclasses import dataclass
+from math import ceil
 
 
 @dataclass(frozen=True)
@@ -57,7 +58,8 @@ class Combo:
 
 
 class ComboFinder(tk.Tk):
-    pad = 5
+    default_pad = 5
+    row_count = 10
     current_sort = 'character'
     is_reversed = False
     combos: list[Combo] = []
@@ -88,8 +90,9 @@ class ComboFinder(tk.Tk):
         tk.Tk.__init__(self, *args, **kwargs)
 
         button_width = 15
-        row_count = 15
-
+        column_sizes = (100, 200, 100, 100, 100, 100, 100, 100)
+        
+        self.current_page = tk.IntVar(value=1)
         self.filters = {
             'Character': [tk.StringVar(value='Contains'), tk.StringVar(), 'str'],
             'Notation': [tk.StringVar(value='Contains'), tk.StringVar(), 'str'],
@@ -106,18 +109,17 @@ class ComboFinder(tk.Tk):
 
         # Button frame
 
-        self.button_frame = tk.Frame(self, padx=self.pad, pady=self.pad)
+        self.button_frame = tk.Frame(self, padx=self.default_pad, pady=self.default_pad)
         self.button_frame.grid(row=0, sticky='nesw')
 
         ttk.Button(self.button_frame, text='Import combos', width=button_width, command=self.import_combos)\
-            .grid(row=0, column=0, padx=self.pad, pady=self.pad)
+            .grid(row=0, column=0, padx=self.default_pad, pady=self.default_pad)
         ttk.Button(self.button_frame, text='Filters', width=button_width, command=self.open_filters)\
-            .grid(row=0, column=1, padx=self.pad, pady=self.pad)
+            .grid(row=0, column=1, padx=self.default_pad, pady=self.default_pad)
 
         # Info frame
 
-        self.info_frame = tk.Frame(self, padx=10, pady=self.pad)
-        column_sizes = (100, 200, 100, 100, 100, 100, 100, 100)
+        self.info_frame = tk.Frame(self, padx=10, pady=self.default_pad)
         for column, size in enumerate(column_sizes):
             self.info_frame.grid_columnconfigure(column, minsize=size)
         self.info_frame.grid(row=1, sticky='nsew')
@@ -130,29 +132,44 @@ class ComboFinder(tk.Tk):
             header.config(state='disabled')
 
         self.text_rows = [[
-            ttk.Label(self.info_frame, padding=self.pad) for _ in range(len(self.props))]
-            for _ in range(row_count)]
+            ttk.Label(self.info_frame, padding=self.default_pad) for _ in range(len(self.props))]
+            for _ in range(self.row_count)]
         current_row = 1
         for i, row in enumerate(self.text_rows):
             for column, label in enumerate(row):
                 label.grid(row=current_row, column=column, sticky='nsew')
-                label.config(text=f'{i}{column}')
-            if i == len(self.text_rows)-1:
-                break
             ttk.Separator(self.info_frame, orient='horizontal')\
                 .grid(row=current_row+1, columnspan=8, sticky='nsew')
             current_row += 2
 
-        self.sort_by(self.current_sort)
+        # Bottom frame
 
-        # Message frame
-
-        self.message_frame = tk.Frame(self, padx=self.pad, pady=self.pad)
-        self.message_frame.grid(row=3, sticky='nsew')
+        self.bottom_frame = tk.Frame(self, padx=self.default_pad, pady=self.default_pad)
+        self.bottom_frame.columnconfigure(0, weight=1)
+        self.bottom_frame.columnconfigure(1, weight=1)
+        self.bottom_frame.grid(row=3, sticky='nsew')
 
         self.message_var = tk.StringVar()
-        tk.Message(self.message_frame, textvariable=self.message_var, width=300)\
-            .grid(row=0, column=0, sticky='nsew')
+        tk.Message(self.bottom_frame, textvariable=self.message_var, width=300)\
+            .pack(side='left', pady=self.default_pad)
+        self.page_up_btn = ttk.Button(self.bottom_frame, text='>', width=3, command=self.page_up)
+        self.page_up_btn.pack(side='right', padx=self.default_pad)
+        self.page_entry = ttk.Entry(self.bottom_frame, width=3, textvariable=self.current_page)
+        self.page_entry.pack(side='right')
+        self.page_entry.bind('<Return>', self.update_display)
+        self.page_entry.config(state='disabled')
+        self.page_down_btn = ttk.Button(self.bottom_frame, text='<', width=3, command=self.page_down)
+        self.page_down_btn.pack(side='right', padx=self.default_pad)
+
+        self.sort_by(self.current_sort)
+
+    def page_down(self):
+        self.current_page.set(self.current_page.get()-1)
+        self.update_display()
+
+    def page_up(self):
+        self.current_page.set(self.current_page.get()+1)
+        self.update_display()
 
     def open_filters(self):
         try:
@@ -167,14 +184,14 @@ class ComboFinder(tk.Tk):
 
         # Filters frame
 
-        self.filters_frame = tk.Frame(self.filter_window, padx=self.pad, pady=self.pad)
+        self.filters_frame = tk.Frame(self.filter_window, padx=self.default_pad, pady=self.default_pad)
         self.filters_frame.grid(row=0)
 
         for i, prop in enumerate(self.props):
             entry_width = 30
             columnspan = 2
             column = 1
-            padx = self.pad
+            padx = self.default_pad
             ttk.Label(self.filters_frame, text=prop, anchor='center', padding=5)\
                 .grid(row=i, column=0, sticky='w')
             if i > 1:
@@ -183,19 +200,19 @@ class ComboFinder(tk.Tk):
                 column = 2
                 padx = 0
                 ttk.Combobox(self.filters_frame, width=11, textvariable=self.filters[prop][0], values=self.compares)\
-                    .grid(row=i, column=1, sticky='w', padx=self.pad, pady=self.pad)
+                    .grid(row=i, column=1, sticky='w', padx=self.default_pad, pady=self.default_pad)
             ttk.Entry(self.filters_frame, width=entry_width, textvariable=self.filters[prop][1])\
-                .grid(row=i, column=column, sticky='w', padx=padx, pady=self.pad, columnspan=columnspan)
+                .grid(row=i, column=column, sticky='w', padx=padx, pady=self.default_pad, columnspan=columnspan)
 
         # Buttons frame
 
-        self.submit_frame = tk.Frame(self.filter_window, padx=self.pad, pady=self.pad)
+        self.submit_frame = tk.Frame(self.filter_window, padx=self.default_pad, pady=self.default_pad)
         self.submit_frame.grid(row=1)
 
         ttk.Button(self.submit_frame, text='Submit', command=self.update_combos)\
-            .grid(row=0, column=0, padx=self.pad, pady=self.pad, sticky='w')
+            .grid(row=0, column=0, padx=self.default_pad, pady=self.default_pad, sticky='w')
         ttk.Button(self.submit_frame, text='Reset', command=self.reset_filters)\
-            .grid(row=0, column=1, padx=self.pad, pady=self.pad, sticky='w')
+            .grid(row=0, column=1, padx=self.default_pad, pady=self.default_pad, sticky='w')
 
     def import_combos(self):
         filename = filedialog.askopenfilename(initialdir=os.path.abspath('.'), filetypes=[('Comma separated', '.csv')])
@@ -226,13 +243,29 @@ class ComboFinder(tk.Tk):
         self.update_display()
         self.message_var.set(f'Found {len(self.display_combos)} out of {len(self.combos)} total combos')
 
-    def update_display(self):
+    def update_display(self, event=None):
         self.display_combos.sort(key=lambda x: x.get(self.current_sort), reverse=self.is_reversed)
-        state = 'normal' if self.display_combos else 'disabled'
-        for header in self.headers:
-            header.config(state=state)
+        total_pages = max(1, ceil(len(self.display_combos) / self.row_count))
+        
+        if self.current_page.get() > total_pages:
+            self.current_page.set(total_pages)
+        elif self.current_page.get() < 1:
+            self.current_page.set(1)
 
-        for i, row in enumerate(self.text_rows):
+        header_state = 'normal' if self.display_combos else 'disabled'
+        page_entry_state = 'normal' if total_pages > 1 else 'disabled'
+        down_btn_state = 'normal' if self.current_page.get() > 1 else 'disabled'
+        up_btn_state = 'normal' if self.current_page.get() < total_pages else 'disabled'
+
+        for header in self.headers:
+            header.config(state=header_state)
+        self.page_entry.config(state=page_entry_state)
+        self.page_down_btn.config(state=down_btn_state)
+        self.page_up_btn.config(state=up_btn_state)
+
+
+        start_index = (self.row_count*self.current_page.get())-self.row_count
+        for i, row in enumerate(self.text_rows, start_index):
             for j, label in enumerate(row):
                 text = self.display_combos[i].get(self.props[j].lower()) if i < len(self.display_combos) else ''
                 label.config(text=text)
