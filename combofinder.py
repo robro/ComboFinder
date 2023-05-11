@@ -62,7 +62,7 @@ class ComboFinder(tk.Tk):
     is_reversed = False
     combos: list[Combo] = []
     display_combos: list[Combo] = []
-    combo_props = (
+    props = (
         'Character',
         'Notation',
         'Startup',
@@ -87,9 +87,8 @@ class ComboFinder(tk.Tk):
     def __init__(self, *args, **kwargs):
         tk.Tk.__init__(self, *args, **kwargs)
 
-        button_width = 20
-        row_count = 10
-        text_bgs = ('white', 'lightgray')
+        button_width = 15
+        row_count = 15
 
         self.filters = {
             'Character': [tk.StringVar(value='Contains'), tk.StringVar(), 'str'],
@@ -111,41 +110,49 @@ class ComboFinder(tk.Tk):
         self.button_frame.grid(row=0, sticky='nesw')
 
         ttk.Button(self.button_frame, text='Import combos', width=button_width, command=self.import_combos)\
-            .grid(row=0, column=0, padx=self.pad, pady=self.pad, sticky='w')
+            .grid(row=0, column=0, padx=self.pad, pady=self.pad)
         ttk.Button(self.button_frame, text='Filters', width=button_width, command=self.open_filters)\
-            .grid(row=0, column=1, padx=self.pad, pady=self.pad, sticky='w')
+            .grid(row=0, column=1, padx=self.pad, pady=self.pad)
 
         # Info frame
 
         self.info_frame = tk.Frame(self, padx=10, pady=self.pad)
         column_sizes = (100, 200, 100, 100, 100, 100, 100, 100)
-        for i, size in enumerate(column_sizes):
-            self.info_frame.grid_columnconfigure(i, minsize=size)
-        self.info_frame.grid(row=1)
-        self.headers = [ttk.Button(self.info_frame, text=prop, name=prop.lower(), command=partial(self.sort_by, prop.lower()))
-                        for prop in self.combo_props]
-        for i, header in enumerate(self.headers):
-            header.grid(row=0, column=i, sticky='nsew')
+        for column, size in enumerate(column_sizes):
+            self.info_frame.grid_columnconfigure(column, minsize=size)
+        self.info_frame.grid(row=1, sticky='nsew')
+
+        self.headers = [ttk.Button(self.info_frame, text=prop, name=prop.lower(),
+                        command=partial(self.sort_by, prop.lower()))
+                        for prop in self.props]
+        for column, header in enumerate(self.headers):
+            header.grid(row=0, column=column, sticky='nsew')
             header.config(state='disabled')
 
         self.text_rows = [[
-            tk.Text(self.info_frame, width=1, height=1, border=0, cursor='arrow', padx=self.pad, pady=self.pad)
-            for _ in range(len(self.combo_props))]
+            ttk.Label(self.info_frame, padding=self.pad) for _ in range(len(self.props))]
             for _ in range(row_count)]
-        for i, text_row in enumerate(self.text_rows, 1):
-            bg_color = text_bgs[0] if i % 2 else text_bgs[1]
-            for j, text_box in enumerate(text_row):
-                text_box.config(bg=bg_color)
-                text_box.grid(row=i, column=j, sticky='nsew')
-                text_box.config(state='disabled')
+        current_row = 1
+        for i, row in enumerate(self.text_rows):
+            for column, label in enumerate(row):
+                label.grid(row=current_row, column=column, sticky='nsew')
+                label.config(text=f'{i}{column}')
+            if i == len(self.text_rows)-1:
+                break
+            ttk.Separator(self.info_frame, orient='horizontal')\
+                .grid(row=current_row+1, columnspan=8, sticky='nsew')
+            current_row += 2
+
+        self.sort_by(self.current_sort)
 
         # Message frame
 
-        self.message_frame = tk.Frame(self)
-        self.message_frame.grid(row=2, sticky='nsew')
+        self.message_frame = tk.Frame(self, padx=self.pad, pady=self.pad)
+        self.message_frame.grid(row=3, sticky='nsew')
+
         self.message_var = tk.StringVar()
-        tk.Message(self.message_frame, textvariable=self.message_var, width=300).grid(sticky='w')
-        self.sort_by(self.current_sort)
+        tk.Message(self.message_frame, textvariable=self.message_var, width=300)\
+            .grid(row=0, column=0, sticky='nsew')
 
     def open_filters(self):
         try:
@@ -163,7 +170,7 @@ class ComboFinder(tk.Tk):
         self.filters_frame = tk.Frame(self.filter_window, padx=self.pad, pady=self.pad)
         self.filters_frame.grid(row=0)
 
-        for i, prop in enumerate(self.combo_props):
+        for i, prop in enumerate(self.props):
             entry_width = 30
             columnspan = 2
             column = 1
@@ -226,13 +233,10 @@ class ComboFinder(tk.Tk):
             header.config(state=state)
 
         for i, row in enumerate(self.text_rows):
-            for j, text in enumerate(row):
-                text.config(state='normal')
-                text.delete(1.0, 'end')
-                if i < len(self.display_combos):
-                    text.insert('end', self.display_combos[i].get(self.combo_props[j].lower()))
-                text.config(state='disabled')
-
+            for j, label in enumerate(row):
+                text = self.display_combos[i].get(self.props[j].lower()) if i < len(self.display_combos) else ''
+                label.config(text=text)
+                
     def sort_by(self, prop: str):
         for header in self.headers:
             default = 'active' if header.winfo_name() == prop else 'normal'
