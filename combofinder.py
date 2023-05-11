@@ -246,11 +246,9 @@ class ComboFinder(tk.Tk):
     def update_display(self, event=None):
         self.display_combos.sort(key=lambda x: x.get(self.current_sort), reverse=self.is_reversed)
         total_pages = max(1, ceil(len(self.display_combos) / self.row_count))
-        
-        if self.current_page.get() > total_pages:
-            self.current_page.set(total_pages)
-        elif self.current_page.get() < 1:
-            self.current_page.set(1)
+
+        self.current_page.set(min(self.current_page.get(), total_pages))
+        self.current_page.set(max(self.current_page.get(), 1))
 
         header_state = 'normal' if self.display_combos else 'disabled'
         page_entry_state = 'normal' if total_pages > 1 else 'disabled'
@@ -263,11 +261,11 @@ class ComboFinder(tk.Tk):
         self.page_down_btn.config(state=down_btn_state)
         self.page_up_btn.config(state=up_btn_state)
 
-
         start_index = (self.row_count*self.current_page.get())-self.row_count
         for i, row in enumerate(self.text_rows, start_index):
             for j, label in enumerate(row):
-                text = self.display_combos[i].get(self.props[j].lower()) if i < len(self.display_combos) else ''
+                text = self.display_combos[i].get(self.props[j].lower())\
+                       if i < len(self.display_combos) else ''
                 label.config(text=text)
                 
     def sort_by(self, prop: str):
