@@ -122,9 +122,8 @@ class ComboFinder(tk.Tk):
         for i, size in enumerate(column_sizes):
             self.info_frame.grid_columnconfigure(i, minsize=size)
         self.info_frame.grid(row=1)
-        self.headers = [ttk.Button(self.info_frame, text=header_str, name=header_str.lower(),
-                        command=partial(self.sort_by, header_str))
-                        for header_str in self.combo_props]
+        self.headers = [ttk.Button(self.info_frame, text=prop, name=prop.lower(), command=partial(self.sort_by, prop.lower()))
+                        for prop in self.combo_props]
         for i, header in enumerate(self.headers):
             header.grid(row=0, column=i, sticky='nsew')
             header.config(state='disabled')
@@ -235,7 +234,6 @@ class ComboFinder(tk.Tk):
                 text.config(state='disabled')
 
     def sort_by(self, prop: str):
-        prop = prop.lower()
         for header in self.headers:
             default = 'active' if header.winfo_name() == prop else 'normal'
             header.config(default=default)
