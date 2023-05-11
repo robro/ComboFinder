@@ -93,7 +93,7 @@ class ComboFinder(tk.Tk):
         text_bgs = ('white', 'lightgray')
 
         self.filters = {
-            'Character': [tk.StringVar(value=self.compares[0]), tk.StringVar(), 'str'],
+            'Character': [tk.StringVar(value='Contains'), tk.StringVar(), 'str'],
             'Notation': [tk.StringVar(value='Contains'), tk.StringVar(), 'str'],
             'Startup': [tk.StringVar(value=self.compares[0]), tk.StringVar(), 'int'],
             'Drive': [tk.StringVar(value=self.compares[0]), tk.StringVar(), 'float'],
