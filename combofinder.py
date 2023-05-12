@@ -94,7 +94,6 @@ class ComboFinder(tk.Tk):
 
     compares = (
         'Equals',
-        'Not Equals',
         'Greater Than',
         'Less Than'
     )
@@ -315,7 +314,6 @@ class ComboFinder(tk.Tk):
 
     def get_truth(self, inp, relate, cut):
         ops = {'Equals': operator.eq,
-               'Not Equals': operator.ne,
                'Greater Than': operator.gt,
                'Less Than': operator.lt,
                'Contains': operator.contains}
