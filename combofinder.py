@@ -54,7 +54,7 @@ class Combo:
     @property
     def advantage(self) -> int:
         return int(self._advantage)
-    
+
     @property
     def position(self) -> str:
         return str(self._position)
@@ -65,7 +65,7 @@ class Combo:
         if prop == 'advantage' and display:
             return f'{"+" if self.advantage >= 0 else ""}{self.advantage}'
         return getattr(self, prop)
-    
+
 
 @dataclass
 class ComboFilter:
@@ -159,9 +159,10 @@ class ComboFinder(tk.Tk):
             ttk.Label(self.info_frame, padding=self.default_pad) for _ in range(len(self.filters))]
             for _ in range(self.row_count)]
         current_row = 1
-        for i, row in enumerate(self.text_rows):
+        for row in self.text_rows:
             for column, label in enumerate(row):
                 label.grid(row=current_row, column=column, sticky='nsew')
+                label.bind('<Button-1>', lambda event: print(event.widget.cget('text')))
             ttk.Separator(self.info_frame, orient='horizontal')\
                 .grid(row=current_row+1, columnspan=len(self.filters), sticky='nsew')
             current_row += 2
@@ -211,7 +212,7 @@ class ComboFinder(tk.Tk):
                 .grid(row=i, column=0, sticky='w')
             if prop.options:
                 textvar = prop.compare if prop.has_entry else prop.value
-                ttk.Combobox(self.filters_frame, width=part_width-3, textvariable=textvar, values=prop.options)\
+                ttk.Combobox(self.filters_frame, width=part_width-3, textvariable=textvar, values=prop.options, state='readonly')\
                     .grid(row=i, column=1, sticky='w', padx=self.default_pad, pady=self.default_pad)
             if prop.has_entry:
                 width = part_width if prop.options else full_width
@@ -235,7 +236,6 @@ class ComboFinder(tk.Tk):
         filename = filedialog.askopenfilename(initialdir=os.path.abspath('.'), filetypes=[('Comma separated', '.csv')])
         if not filename:
             return
-
         with open(filename, 'r') as combos_file:
             combos_list = list(csv.reader(combos_file, skipinitialspace=True))[1:]
 
@@ -252,7 +252,7 @@ class ComboFinder(tk.Tk):
                     continue
                 if filter.label == 'Position' and filter.value.get() == 'Any':
                     continue
-                if not get_truth(combo.get(filter.label.lower()), filter.compare.get(),
+                if not self.get_truth(combo.get(filter.label.lower()), filter.compare.get(),
                         self.types[filter.type](filter.value.get())):
                     break
             else:
@@ -286,7 +286,7 @@ class ComboFinder(tk.Tk):
                 text = self.display_combos[i].get(self.labels[j].lower(), display=True)\
                        if i < len(self.display_combos) else ''
                 label.config(text=text)
-                
+
     def sort_by(self, prop: str):
         for header in self.headers:
             default = 'active' if header.winfo_name() == prop else 'normal'
@@ -300,7 +300,7 @@ class ComboFinder(tk.Tk):
         for filter in self.filters:
             filter.compare.set(filter.default_compare)
             filter.value.set(filter.default_value)
-        
+
         self.display_combos = self.combos
         self.update_display()
         self.message_var.set('Filters reset')
@@ -313,14 +313,14 @@ class ComboFinder(tk.Tk):
         self.current_page.set(self.current_page.get()+1)
         self.update_display()
 
+    def get_truth(self, inp, relate, cut):
+        ops = {'Equals': operator.eq,
+               'Not Equals': operator.ne,
+               'Greater Than': operator.gt,
+               'Less Than': operator.lt,
+               'Contains': operator.contains}
+        return ops[relate](inp, cut)
 
-def get_truth(inp, relate, cut):
-    ops = {'Equals': operator.eq,
-           'Not Equals': operator.ne,
-           'Greater Than': operator.gt,
-           'Less Than': operator.lt,
-           'Contains': operator.contains}
-    return ops[relate](inp, cut)
 
 if __name__ == "__main__":
     combo_finder = ComboFinder()

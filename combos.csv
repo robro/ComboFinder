@@ -1,12 +1,12 @@
 Character, Notation, Startup, Drive, Super, Carry, Damage, Advantage, Position
-Ryu, 2MK xx 236HP, 8, 0.0, 0, 10, 1000, -5, Midscreen
+Ryu, 2MK xx 236HP, 4, 0.0, 0, 10, 1000, -5, Midscreen
 Cammy, 2MK xx 236LK, 8, 2.0, 1, 25, 800, 30, Fullscreen
-DJ, 2MK xx 236LK, 8, 2.0, 1, 60, 800, -1, Corner
-Blanka, 2MK xx 236LK, 8, 2.0, 1, 4, 800, -1, Any
-Guile, 2MK xx 236LK, 8, 2.0, 1, 20, 800, -1, Any
-Kimberly, 2MK xx 236LK, 8, 2.0, 1, 80, 800, 25, Corner
-Manon, 2MK xx 236LK, 8, 2.0, 1, 100, 800, -1, Any
-Marisa, 2MK xx 236LK, 8, 2.0, 1, 10, 800, -1, Fullscreen
-Jamie, 2MK xx 236LK, 8, 2.0, 1, 20, 800, 69, Corner
-JP, 2MK xx 236LK, 8, 2.0, 1, 33, 800, -1, Midscreen
-Lily, 2MK xx 236LK, 8, 2.0, 1, 50, 800, -1, Any
+DJ, 2MK xx 236LK, 7, 1.5, 3, 60, 5000, -1, Corner
+Blanka, 2MK xx 236LK, 12, 5.0, 3, 4, 3500, -1, Any
+Guile, 2MK xx 236LK, 4, 0.0, 0, 20, 500, -1, Any
+Kimberly, 2MK xx 236LK, 7, 3.0, 1, 80, 6000, 25, Corner
+Manon, 2MK xx 236LK, 20, 6.0, 2, 100, 3700, -1, Any
+Marisa, 2MK xx 236LK, 10, 1.5, 2, 10, 5200, -1, Fullscreen
+Jamie, 2MK xx 236LK, 7, 3.5, 3, 20, 2300, 69, Corner
+JP, 2MK xx 236LK, 8, 2.0, 0, 33, 1500, -1, Midscreen
+Lily, 2MK xx 236LK, 5, 1.0, 1, 50, 800, -1, Any
