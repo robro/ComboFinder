@@ -86,6 +86,7 @@ class ComboFilter:
 class ComboFinder(tk.Tk):
 
     default_pad = 5
+    combos_per_page = 10
     current_sort = 'character'
     is_reversed = False
     combos: list[Combo] = []
@@ -114,7 +115,6 @@ class ComboFinder(tk.Tk):
         self.title('SF6 Combo Finder')
         self.resizable(False, False)
         self.current_page = tk.IntVar(value=1)
-        self.combos_per_page = tk.IntVar(value=10)
         self.filters = (
             ComboFilter('Character', tk.StringVar(value='Contains'), tk.StringVar(), 'str', 100),
             ComboFilter('Notation', tk.StringVar(value='Contains'), tk.StringVar(), 'str', 200),
@@ -166,7 +166,10 @@ class ComboFinder(tk.Tk):
         self.page_down_btn = ttk.Button(self.bottom_frame, text='<', width=3, command=self.page_down)
         self.page_down_btn.pack(side='right', padx=self.default_pad)
 
-        self.per_page_box = ttk.Combobox(self.bottom_frame, width=8, textvariable=self.combos_per_page, values=(5, 10, 20), state='readonly')
+        page_sizes = (5, 10, 20)
+        page_box_values = [f'{size} per page' for size in page_sizes]
+        self.per_page_var = tk.StringVar(value=page_box_values[1])
+        self.per_page_box = ttk.Combobox(self.bottom_frame, width=12, textvariable=self.per_page_var, values=page_box_values, state='readonly')
         self.per_page_box.pack(side='right', padx=self.default_pad)
         self.per_page_box.bind('<<ComboboxSelected>>', self.update_combo_frame)
         ttk.Label(self.bottom_frame, text='Show:').pack(side='right', padx=self.default_pad)
@@ -193,7 +196,7 @@ class ComboFinder(tk.Tk):
 
         self.combo_rows = [[
             ttk.Label(self.combo_frame, padding=self.default_pad) for _ in range(len(self.filters))]
-            for _ in range(self.combos_per_page.get())]
+            for _ in range(self.combos_per_page)]
         current_row = 1
         for row in self.combo_rows:
             for column, label in enumerate(row):
@@ -202,7 +205,8 @@ class ComboFinder(tk.Tk):
                 .grid(row=current_row+1, columnspan=len(self.filters), sticky='nsew')
             current_row += 2
 
-    def update_combo_frame(self, event=None):
+    def update_combo_frame(self, event=tk.Event()):
+        self.combos_per_page = int(event.widget.get().split()[0])
         self.create_combo_frame()
         self.update_display()
 
@@ -282,7 +286,7 @@ class ComboFinder(tk.Tk):
 
     def update_display(self, event=None):
         self.display_combos.sort(key=lambda x: x.get(self.current_sort), reverse=self.is_reversed)
-        total_pages = max(1, ceil(len(self.display_combos) / self.combos_per_page.get()))
+        total_pages = max(1, ceil(len(self.display_combos) / self.combos_per_page))
 
         self.current_page.set(min(self.current_page.get(), total_pages))
         self.current_page.set(max(self.current_page.get(), 1))
@@ -300,7 +304,7 @@ class ComboFinder(tk.Tk):
         self.page_down_btn.config(state=down_btn_state)
         self.page_up_btn.config(state=up_btn_state)
 
-        start_index = (self.combos_per_page.get()*self.current_page.get())-self.combos_per_page.get()
+        start_index = (self.combos_per_page*self.current_page.get())-self.combos_per_page
         for i, row in enumerate(self.combo_rows, start_index):
             for j, label in enumerate(row):
                 text = self.display_combos[i].get(self.labels[j].lower(), display=True)\
