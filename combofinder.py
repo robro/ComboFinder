@@ -12,6 +12,7 @@ from math import ceil
 
 @dataclass(frozen=True)
 class Combo:
+
     _character: str
     _notation: str
     _startup: str
@@ -64,26 +65,33 @@ class Combo:
         if prop == 'advantage' and display:
             return f'{"+" if self.advantage >= 0 else ""}{self.advantage}'
         return getattr(self, prop)
+    
+
+@dataclass
+class ComboFilter:
+
+    label: str
+    compare: tk.StringVar
+    value: tk.StringVar
+    type: str
+    column_size: int
+    has_entry: bool = True
+    options: tuple[str] = None
+
+    def __post_init__(self):
+        self.default_compare = self.compare.get()
+        self.default_value = self.value.get()
 
 
 class ComboFinder(tk.Tk):
+
     default_pad = 5
     row_count = 10
     current_sort = 'character'
     is_reversed = False
     combos: list[Combo] = []
     display_combos: list[Combo] = []
-    props = (
-        'Character',
-        'Notation',
-        'Startup',
-        'Drive',
-        'Super',
-        'Carry',
-        'Damage',
-        'Advantage',
-        'Position'
-    )
+
     compares = (
         'Equals',
         'Not Equals',
@@ -105,30 +113,29 @@ class ComboFinder(tk.Tk):
     def __init__(self, *args, **kwargs):
         tk.Tk.__init__(self, *args, **kwargs)
 
-        button_width = 15
-        column_sizes = (100, 200, 100, 100, 100, 100, 100, 100, 100)
-        
-        self.current_page = tk.IntVar(value=1)
-        self.filters = {
-            'Character': [tk.StringVar(value='Contains'), tk.StringVar(), 'str'],
-            'Notation': [tk.StringVar(value='Contains'), tk.StringVar(), 'str'],
-            'Startup': [tk.StringVar(value='Equals'), tk.StringVar(), 'int'],
-            'Drive': [tk.StringVar(value='Equals'), tk.StringVar(), 'float'],
-            'Super': [tk.StringVar(value='Equals'), tk.StringVar(), 'int'],
-            'Carry': [tk.StringVar(value='Equals'), tk.StringVar(), 'int'],
-            'Damage': [tk.StringVar(value='Equals'), tk.StringVar(), 'int'],
-            'Advantage': [tk.StringVar(value='Equals'), tk.StringVar(), 'int'],
-            'Position': [tk.StringVar(value='Equals'), tk.StringVar(value='Any'), 'str']
-        }
-
         self.title('SF6 Combo Finder')
         self.resizable(False, False)
+        self.current_page = tk.IntVar(value=1)
+        self.filters = (
+            ComboFilter('Character', tk.StringVar(value='Contains'), tk.StringVar(), 'str', 100),
+            ComboFilter('Notation', tk.StringVar(value='Contains'), tk.StringVar(), 'str', 200),
+            ComboFilter('Startup', tk.StringVar(value=self.compares[0]), tk.StringVar(), 'int', 100, options=self.compares),
+            ComboFilter('Drive', tk.StringVar(value=self.compares[0]), tk.StringVar(), 'float', 100, options=self.compares),
+            ComboFilter('Super', tk.StringVar(value=self.compares[0]), tk.StringVar(), 'int', 100, options=self.compares),
+            ComboFilter('Carry', tk.StringVar(value=self.compares[0]), tk.StringVar(), 'int', 100, options=self.compares),
+            ComboFilter('Damage', tk.StringVar(value=self.compares[0]), tk.StringVar(), 'int', 100, options=self.compares),
+            ComboFilter('Advantage', tk.StringVar(value=self.compares[0]), tk.StringVar(), 'int', 100, options=self.compares),
+            ComboFilter('Position', tk.StringVar(value=self.compares[0]), tk.StringVar(value=self.positions[0]), 'str', 100,
+                        options=self.positions, has_entry=False),
+        )
+        self.labels = [filter.label for filter in self.filters]
 
         # Button frame
 
         self.button_frame = tk.Frame(self, padx=self.default_pad, pady=self.default_pad)
         self.button_frame.grid(row=0, sticky='nesw')
 
+        button_width = 15
         ttk.Button(self.button_frame, text='Import combos', width=button_width, command=self.import_combos)\
             .grid(row=0, column=0, padx=self.default_pad, pady=self.default_pad)
         ttk.Button(self.button_frame, text='Filters', width=button_width, command=self.open_filters)\
@@ -137,26 +144,26 @@ class ComboFinder(tk.Tk):
         # Info frame
 
         self.info_frame = tk.Frame(self, padx=10, pady=self.default_pad)
-        for column, size in enumerate(column_sizes):
+        for column, size in enumerate([prop.column_size for prop in self.filters]):
             self.info_frame.grid_columnconfigure(column, minsize=size)
         self.info_frame.grid(row=1, sticky='nsew')
 
-        self.headers = [ttk.Button(self.info_frame, text=prop, name=prop.lower(),
-                        command=partial(self.sort_by, prop.lower()))
-                        for prop in self.props]
+        self.headers = [ttk.Button(self.info_frame, text=filter.label, name=filter.label.lower(),
+                        command=partial(self.sort_by, filter.label.lower()))
+                        for filter in self.filters]
         for column, header in enumerate(self.headers):
             header.grid(row=0, column=column, sticky='nsew')
             header.config(state='disabled')
 
         self.text_rows = [[
-            ttk.Label(self.info_frame, padding=self.default_pad) for _ in range(len(self.props))]
+            ttk.Label(self.info_frame, padding=self.default_pad) for _ in range(len(self.filters))]
             for _ in range(self.row_count)]
         current_row = 1
         for i, row in enumerate(self.text_rows):
             for column, label in enumerate(row):
                 label.grid(row=current_row, column=column, sticky='nsew')
             ttk.Separator(self.info_frame, orient='horizontal')\
-                .grid(row=current_row+1, columnspan=len(self.props), sticky='nsew')
+                .grid(row=current_row+1, columnspan=len(self.filters), sticky='nsew')
             current_row += 2
 
         # Bottom frame
@@ -180,14 +187,6 @@ class ComboFinder(tk.Tk):
 
         self.sort_by(self.current_sort)
 
-    def page_down(self):
-        self.current_page.set(self.current_page.get()-1)
-        self.update_display()
-
-    def page_up(self):
-        self.current_page.set(self.current_page.get()+1)
-        self.update_display()
-
     def open_filters(self):
         try:
             self.filter_window.focus()
@@ -204,26 +203,23 @@ class ComboFinder(tk.Tk):
         self.filters_frame = tk.Frame(self.filter_window, padx=self.default_pad, pady=self.default_pad)
         self.filters_frame.grid(row=0)
 
-        for i, prop in enumerate(self.props):
-            entry_width = 30
-            columnspan = 2
-            column = 1
-            padx = self.default_pad
-            ttk.Label(self.filters_frame, text=prop, anchor='center', padding=5)\
+        full_width = 33
+        part_width = 15
+
+        for i, prop in enumerate(self.filters):
+            ttk.Label(self.filters_frame, text=prop.label, anchor='center', padding=self.default_pad)\
                 .grid(row=i, column=0, sticky='w')
-            if i > 1 and prop != 'Position':
-                entry_width -= 16
-                columnspan = 1
-                column = 2
-                padx = 0
-                ttk.Combobox(self.filters_frame, width=11, textvariable=self.filters[prop][0], values=self.compares)\
+            if prop.options:
+                textvar = prop.compare if prop.has_entry else prop.value
+                ttk.Combobox(self.filters_frame, width=part_width-3, textvariable=textvar, values=prop.options)\
                     .grid(row=i, column=1, sticky='w', padx=self.default_pad, pady=self.default_pad)
-            if prop != 'Position':
-                ttk.Entry(self.filters_frame, width=entry_width, textvariable=self.filters[prop][1])\
-                    .grid(row=i, column=column, sticky='w', padx=padx, pady=self.default_pad, columnspan=columnspan)
-            else:
-                ttk.Combobox(self.filters_frame, width=11, textvariable=self.filters[prop][1], values=self.positions)\
-                    .grid(row=i, column=column, sticky='w', padx=padx, pady=self.default_pad, columnspan=columnspan)
+            if prop.has_entry:
+                width = part_width if prop.options else full_width
+                column = 2 if prop.options else 1
+                columnspan = 1 if prop.options else 2
+                sticky = 'e' if prop.options else 'w'
+                ttk.Entry(self.filters_frame, width=width, textvariable=prop.value)\
+                    .grid(row=i, column=column, sticky=sticky, padx=self.default_pad, pady=self.default_pad, columnspan=columnspan)
 
         # Buttons frame
 
@@ -251,13 +247,13 @@ class ComboFinder(tk.Tk):
     def update_combos(self):
         matches = []
         for combo in self.combos:
-            for prop in self.filters:
-                if not self.filters[prop][1].get():
+            for filter in self.filters:
+                if not filter.value.get():
                     continue
-                if prop == 'Position' and self.filters[prop][1].get() == 'Any':
+                if filter.label == 'Position' and filter.value.get() == 'Any':
                     continue
-                if not get_truth(combo.get(prop.lower()), self.filters[prop][0].get(),
-                        self.types[self.filters[prop][2]](self.filters[prop][1].get())):
+                if not get_truth(combo.get(filter.label.lower()), filter.compare.get(),
+                        self.types[filter.type](filter.value.get())):
                     break
             else:
                 matches.append(combo)
@@ -287,7 +283,7 @@ class ComboFinder(tk.Tk):
         start_index = (self.row_count*self.current_page.get())-self.row_count
         for i, row in enumerate(self.text_rows, start_index):
             for j, label in enumerate(row):
-                text = self.display_combos[i].get(self.props[j].lower(), display=True)\
+                text = self.display_combos[i].get(self.labels[j].lower(), display=True)\
                        if i < len(self.display_combos) else ''
                 label.config(text=text)
                 
@@ -302,16 +298,20 @@ class ComboFinder(tk.Tk):
 
     def reset_filters(self):
         for filter in self.filters:
-            if filter not in ('Character', 'Notation', 'Position'):
-                self.filters[filter][0].set('Equals')
-            if filter == 'Position':
-                self.filters[filter][1].set('Any')
-            else:
-                self.filters[filter][1].set('')
+            filter.compare.set(filter.default_compare)
+            filter.value.set(filter.default_value)
         
         self.display_combos = self.combos
         self.update_display()
         self.message_var.set('Filters reset')
+
+    def page_down(self):
+        self.current_page.set(self.current_page.get()-1)
+        self.update_display()
+
+    def page_up(self):
+        self.current_page.set(self.current_page.get()+1)
+        self.update_display()
 
 
 def get_truth(inp, relate, cut):
