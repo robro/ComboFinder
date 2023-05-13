@@ -113,6 +113,7 @@ class ComboFinder(tk.Tk):
         tk.Tk.__init__(self, *args, **kwargs)
 
         self.title('SF6 Combo Finder')
+        self.iconbitmap('icon.ico')
         self.resizable(False, False)
         self.current_page = tk.IntVar(value=1)
         self.filters = (
@@ -222,6 +223,7 @@ class ComboFinder(tk.Tk):
 
         self.filter_window = tk.Toplevel(self)
         self.filter_window.title('Filters')
+        self.filter_window.iconbitmap('icon.ico')
         self.filter_window.resizable(False, False)
 
         # Filters frame
